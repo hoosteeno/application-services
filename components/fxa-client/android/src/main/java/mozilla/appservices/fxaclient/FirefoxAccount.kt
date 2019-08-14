@@ -93,6 +93,22 @@ class FirefoxAccount(handle: FxaHandle, persistCallback: PersistCallback?) : Aut
      * This performs network requests, and should not be used on the main thread.
      *
      * @param scopes List of OAuth scopes for which the client wants access
+     * @param context The FxA content server context parameter to use as part of the flow
+     * @return String that resolves to the flow URL when complete
+     */
+    fun beginOAuthFlow(scopes: Array<String>, context: String): String {
+        val scope = scopes.joinToString(" ")
+        return rustCallWithLock { e ->
+            LibFxAFFI.INSTANCE.begin_oauth_flow_with_context(this.handle.get(), scope, context, e)
+        }.getAndConsumeRustString()
+    }
+
+    /**
+     * Constructs a URL used to begin the OAuth flow for the requested scopes and keys.
+     *
+     * This performs network requests, and should not be used on the main thread.
+     *
+     * @param scopes List of OAuth scopes for which the client wants access
      * @return String that resolves to the flow URL when complete
      */
     fun beginOAuthFlow(scopes: Array<String>): String {

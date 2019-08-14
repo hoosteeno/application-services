@@ -92,6 +92,18 @@ impl FirefoxAccount {
     ///
     /// * `scopes` - Space-separated list of requested scopes.
     pub fn begin_oauth_flow(&mut self, scopes: &[&str]) -> Result<String> {
+        return self.begin_oauth_flow_with_context(scopes, "oauth");
+    }
+
+    /// Initiate an OAuth login flow and return a URL that should be navigated to.
+    ///
+    /// * `scopes` - Space-separated list of requested scopes.
+    /// * `context` - Custom FxA content server context.
+    pub fn begin_oauth_flow_with_context(
+        &mut self,
+        scopes: &[&str],
+        context: &str,
+    ) -> Result<String> {
         let mut url = if self.state.last_seen_profile.is_some() {
             self.state.config.content_url_path("/oauth/force_auth")?
         } else {
@@ -100,7 +112,8 @@ impl FirefoxAccount {
 
         url.query_pairs_mut()
             .append_pair("action", "email")
-            .append_pair("response_type", "code");
+            .append_pair("response_type", "code")
+            .append_pair("context", context);
 
         if let Some(ref cached_profile) = self.state.last_seen_profile {
             url.query_pairs_mut()
@@ -309,7 +322,7 @@ mod tests {
         assert_eq!(flow_url.path(), "/authorization");
 
         let mut pairs = flow_url.query_pairs();
-        assert_eq!(pairs.count(), 10);
+        assert_eq!(pairs.count(), 11);
         assert_eq!(
             pairs.next(),
             Some((Cow::Borrowed("action"), Cow::Borrowed("email")))
@@ -318,6 +331,12 @@ mod tests {
             pairs.next(),
             Some((Cow::Borrowed("response_type"), Cow::Borrowed("code")))
         );
+
+        assert_eq!(
+            pairs.next(),
+            Some((Cow::Borrowed("context"), Cow::Borrowed("oauth")))
+        );
+
         assert_eq!(
             pairs.next(),
             Some((Cow::Borrowed("client_id"), Cow::Borrowed("12345678")))

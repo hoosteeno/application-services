@@ -214,6 +214,34 @@ pub extern "C" fn fxa_begin_oauth_flow(
     })
 }
 
+/// Request a OAuth token by starting a new OAuth flow with a custom context.
+///
+/// This function returns a URL string that the caller should open in a webview.
+///
+/// Once the user has confirmed the authorization grant, they will get redirected to `redirect_url`:
+/// the caller must intercept that redirection, extract the `code` and `state` query parameters and call
+/// [fxa_complete_oauth_flow] to complete the flow.
+///
+/// # Safety
+///
+/// A destructor [fxa_str_free] is provided for releasing the memory for this
+/// pointer type.
+#[no_mangle]
+pub extern "C" fn fxa_begin_oauth_flow_with_context(
+    handle: u64,
+    scope: FfiStr<'_>,
+    context: FfiStr<'_>,
+    error: &mut ExternError,
+) -> *mut c_char {
+    log::debug!("fxa_begin_oauth_flow_with_context");
+    ACCOUNTS.call_with_result_mut(error, handle, |fxa| {
+        let scope = scope.as_str();
+        let context = context.as_str();
+        let scopes: Vec<&str> = scope.split(' ').collect();
+        fxa.begin_oauth_flow_with_context(&scopes, &context)
+    })
+}
+
 /// Finish an OAuth flow initiated by [fxa_begin_oauth_flow].
 #[no_mangle]
 pub extern "C" fn fxa_complete_oauth_flow(
